@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html>
+	<head>
+
+		<meta charset="utf-8">
+		<meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no">
+
+		<title>GPS History  v2</title>
+		<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+		<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+		<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+		<link rel="mask-icon" href="safari-pinned-tab.svg" color="#5bbad5">
+		<meta name="msapplication-TileColor" content="#603cba">
+		<meta name="theme-color" content="#ffffff">
+		
+		<!-- Materialize -->
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+		<link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+		<link href="https://fonts.googleapis.com/css?family=Product+Sans:400,400i,700,700i" rel="stylesheet" type="text/css">
+		<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+		<link href="https://fonts.googleapis.com/css?family=Product+Sans:400,400i,700,700i" rel="stylesheet" type="text/css">
+		
+		<style>  
+			html,body{
+				margin: 0;
+				padding: 0;
+				height: 100%;
+				width: 100%;
+				overflow: hidden;
+			}
+			li.optgroup-option > span{ font-size:0.8em !important;white-space: pre-wrap; }			
+		</style>
+		
+		<!-- axios -->
+		<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+		
+		<!-- materialize -->
+		<link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet" />
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.js"></script>
+				
+		<!--vue-google-maps.js-->
+		<script src="scripts/vue-google-maps.js"></script>
+		
+		<!--VueJS-->
+		<script src="https://unpkg.com/vue/dist/vue.js"></script>
+		
+		<!--COL Security-->
+		<script src="http://apps.cityoflewisville.com/colsecurity/colsecurity2.js"></script>
+		
+	</head>
+
+	<body>
+	
+		<div id="app" class="grey lighten-4">
+	
+			<!--..........................-->
+			<!--Navbar -->
+			<!--..........................-->
+			<div class="navbar">
+				<nav>
+					<div class="nav-wrapper grey darken-4 white-text">
+						<a class="brand-logo">&nbsp GPS History</a>
+						<ul class="right hide-on-med-and-down">
+							<li><a>{{username}}</a></li>
+						</ul>
+					</div>
+				</nav>
+			</div>
+			
+			<div class="row main-body-row" style="overflow:hidden;height:calc(100vh - 64px); padding-bottom:0px;">
+				
+				<!--====================================-->
+				<!--Left Panel-->
+				<!--====================================-->
+				<div class="col m3" style="height:100%; padding-left:2em; padding-right:2em; padding-top:1em; overflow-y:scroll;">
+					<br>			
+					<!--Vehicle-->
+						<div class="row" style="margin-bottom:0;">
+							<div class="col s12">
+								<h5>1) Select a Vehicle:</h5>
+							</div>
+						</div>
+						
+						<div class="row">
+							<div class="col s12">
+								<select v-model="vehicleid" class="materialSelect" id="selectVehicles">
+									<option disabled value="">Choose a vehicle</option>
+								</select>
+							</div>
+						</div> <!--end row-->
+						
+					<!--Dates-->
+						<div class="row" style="margin-bottom:0px;">
+							<div class="col s12">
+								<br>
+								<h5 style="margin-bottom:0px;">2) Date / Time Range:</h5>
+								<small>Example: 04/12/2019 08:05 &nbsp | &nbsp 04/12/2019 09:05</small>
+							</div>
+						</div>
+					
+						<div class="row" style="margin-top:0px;">
+						
+							<!--Start Date-->
+							<div class="input-field col s6">
+								<input id="datetime1" type="text" class="validate active" v-model="datetime1">
+								<label for="datetime1">Start Date</label>
+							</div>
+							
+							<!--End Date-->
+							<div class="input-field col s6">
+								<input id="datetime2" type="text" class="validate active" v-model="datetime2">
+								<label for="datetime2">End Date</label>
+							</div>
+						</div> <!--end row-->
+						
+					<!--Button-->
+						<div class="row">
+							<div class="col s12">
+								<h5>3) Click the Button:</h5>
+							</div>
+						</div>
+						<div class="row">
+							<div class="col s12">
+								<a class="btn" v-on:click="getPoints()">Plot GPS Tracks</a>
+							</div>
+						</div> <!--end row-->
+					
+					<!--Messages-->
+						<div class="row">
+							<div class="col s12">
+								<p v-if="loading == true" class="yellow" style="padding:1em;">Loading GPS Points</p>
+								<p class="red white-text" v-if="errorMessage.length > 0">Error: {{errorMessage}}</p>
+							</div>
+						</div> <!--end row-->
+						
+					<!--Output-->
+						<div class="row" v-if="markers.length > 0">
+							<div class="col s12">
+								<h5>Output</h5>
+							</div>
+						</div>
+						<div class="row" v-if="markers.length > 0">
+							<div class="col s12">
+								<table class="white">
+									<tr><td><b>Total GPS Points:</b></td><td>{{markers.length.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}}</td></tr>
+									<tr><td><b>Lat/Lng:</b></td><td>{{markers[index].latitude}},{{markers[index].longitude}}</td></tr>
+								</table>
+							</div>
+						</div>
+					
+				</div> <!--end row-->
+				
+				<!--====================================-->
+				<!--Right Panel-->
+				<!--====================================-->
+				<div class="col m9 ">
+
+					<!--Map-->
+					<div class="row">
+						<div class="col s12" style="height: calc(100vh - 200px);">
+							<gmap-map ref="mymap" :center="map.center" :zoom="map.zoom" style="width: 100%; height: 100%">
+							
+								<!--Single-Marker-->
+								<gmap-marker 
+									v-if="markers.length > 0" 
+									:position="{lat: markers[index].latitude, lng: markers[index].longitude}" 
+									:icon="map.icon">
+								</gmap-marker>
+								
+								<!--Info Window-->
+								<gmap-info-window 
+									v-if="markers.length > 0"
+									:options="{ pixelOffset: { width:0, height: -35}}" 
+									:position="{lat: markers[index].latitude, lng: markers[index].longitude}" 
+									:opened="true">
+									{{ markers[index].CreateTS.replace("T","  ").replace("Z","").split(".")[0] }}
+									<br>
+									Speed: {{markers[index].Velocity}}
+								</gmap-info-window>
+								
+								<!--Path-->
+								<gmap-polyline 
+									v-if="path.length > 0 && showAll == true" 
+									:path="path" 
+									:options="{strokeColor: 'red',strokeOpacity: 0.5}"
+									ref="polyline">
+								</gmap-polyline>
+							</gmap-map>
+							
+						</div>
+					</div>
+					
+					<!--Slider-->
+					<div class="row">
+						<div class="col m12">						
+							<h5 style="margin-top:0;margin-bottom:0;">History Slider</h5>
+							<p class="range-field">
+								<input type="range" min="0" v-bind:max="(markers.length == 0 ? 100 : markers.length)" step="1" v-model="index" v-bind:disabled="markers.length == 0" />
+								<label for="">Drag the circle to move the vehicle along the path</label>
+							</p>				
+							
+						</div>
+					</div>
+				</div>
+				
+			</div> <!--end main-body-row-->
+			
+			
+		
+		</div> <!--end app-->
+		
+		<script>
+			"use strict"
+			Vue.use(VueGoogleMaps, {
+			  load: {
+				key: 'AIzaSyDARduaVDhGG5z3_D54raucZWFABj2PFvE'
+			  },
+			});
+			
+			var app = new Vue({
+				el: "#app",
+				data: {
+					username: '',
+					errorMessage: '',
+					markers: [],
+					datetime1: '',
+					datetime2: '',
+					vehicleid: '',
+					departments: [],
+					vehicles: [],
+					index: 1,
+					loading: false,	
+					showAll: true,
+					map: {
+						center: {lat: 33.045173953531084, lng: -96.97010792578122},
+						zoom: 13,
+						icon: {
+							url: "marker1.png",
+							size: { width: 23, height: 23, f: "px", b: "px" },
+							scaledSize: { width: 23, height: 23, f: "px", b: "px" }
+						},
+						citylimits: []
+					}
+				},
+				mounted: function(){
+					var _this = this
+					_this.logIn(_this.init)
+				},
+				methods: {
+					init: function(){
+						var _this = this
+						//Get vehicle list
+							_this.getVehicles()
+					
+						//Materialize <select>
+							$('select').formSelect()
+							$('.materialSelect').on('contentChanged', function(){ $(this).formSelect() })
+							$('.materialSelect').on('change', function(){ setTimeout(function(){$(".select-dropdown").val(_this.vehicleName(_this.vehicleid))},100) })
+						
+						//City limits layer
+							_this.loadCityLimits()
+					},
+					logIn: function(_callback){
+						var _this = this
+						_this.gettingCount++;
+						_this.username = localStorage.colEmail;
+						
+						if(!(_this.username) || _this.username == ''){
+							setTimeout(function(){
+								_this.logIn(_this.init);
+							}, 100)
+						}else{
+							_callback()
+						}
+					},
+					getVehicles: function(){
+						var _this = this
+						
+						axios.post("https://query.cityoflewisville.com/v2",{
+							webservice: "GPSHistory_Vehicles",
+							username: _this.username 							//generated by colsecurity2.js and added to localStorage
+						}).then(function(_results){	
+
+							//Set Departments and Vehicles
+								_this.departments = _results.data.Departments
+								_this.vehicles = _results.data.Vehicles
+							
+							//Materialize <select> init
+								_this.materializeVehicleSelect()
+						})					
+					},
+					getPoints: function(){
+						var _this = this
+						_this.loading = true
+						
+						axios.post("https://query.cityoflewisville.com/v2",{
+							webservice: "GPSHistory",
+							vehicleid: _this.vehicleid,
+							datetime1: _this.datetime1,
+							datetime2: _this.datetime2
+						}).then(function(_results){
+							if (_results.data[0][0].hasOwnProperty("Error")){
+								_this.errorMessage = _results.data[0][0].Error
+							}else{
+								_this.markers = _results.data[0]
+								_this.loading = false
+							}
+						})					
+					},					
+					loadCityLimits: function(){
+						var _this =this
+						var _citylimits = "https://adaptergis.cityoflewisville.com/arcgis/rest/services/OpenData/Boundaries_OpenData/MapServer/20/query?where=1%3D1&text=&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&relationParam=&outFields=*&returnGeometry=true&returnTrueCurves=false&maxAllowableOffset=&geometryPrecision=&outSR=4326&returnIdsOnly=false&returnCountOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&gdbVersion=&returnDistinctValues=false&resultOffset=&resultRecordCount=&queryByDistance=&returnExtentsOnly=false&datumTransformation=&parameterValues=&rangeValues=&f=geojson"
+					
+						setTimeout(function(){
+							_this.$refs.mymap.$mapObject.data.loadGeoJson(_citylimits)
+						},100)
+					},
+					vehicleName: function(_vehicleid){
+						return this.vehicles.filter(function(_v){
+							return _v.VehicleId == _vehicleid
+						})[0].VIN
+					},
+					materializeVehicleSelect: function(){
+						var _this = this
+						
+						//Materialize <select> override
+						_this.departments.forEach(function(d){
+							var $newOptGroup = $("<optgroup>").attr("label",d.Department).attr("id","og_" + d.DepartmentId)
+							$("#selectVehicles").append($newOptGroup)
+						})
+						_this.vehicles.forEach(function(c){                                                   
+							var $newOpt = $("<option>").attr("value",c.VehicleId).text(c.VIN + (c.Make.length > 0 ? " - " + c.Make : "") + "\nLatest GPS: " + c.LastGPS )
+							$("#og_" + c.DepartmentId).append($newOpt);                                    
+						})                                
+						$("#selectVehicles").trigger("contentChanged")
+					}
+				},
+				computed: {
+					path: function(){
+						return this.markers.map(function(_marker){
+							return {lat: _marker.latitude, lng: _marker.longitude}
+						})
+					}
+				}
+			}) //end Vue
+					
+		</script>
+	</body>
+
+</html>
