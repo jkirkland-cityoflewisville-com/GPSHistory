@@ -28,7 +28,9 @@
 				width: 100%;
 				overflow: hidden;
 			}
-			li.optgroup-option > span{ font-size:0.8em !important;white-space: pre-wrap; }			
+			li.optgroup-option > span{ font-size:0.8em !important;white-space: pre-wrap; }	
+			.bold { font-weight:bold; }
+			.output-row { padding-top: 0.5rem; padding-bottom: 0.5rem; border-bottom: solid 1px gainsboro; font-size: 0.9em; }
 		</style>
 		
 		<!-- axios -->
@@ -130,6 +132,7 @@
 						<div class="row">
 							<div class="col s12">
 								<p v-if="loading == true" class="yellow" style="padding:1em;">Loading GPS Points</p>
+								<p v-if="noResults == true" class="yellow" style="padding:1em;">There were no GPS points found for this vehicle during this timeframe.</p>
 								<p class="red white-text" v-if="errorMessage.length > 0">Error: {{errorMessage}}</p>
 							</div>
 						</div> <!--end row-->
@@ -141,11 +144,27 @@
 							</div>
 						</div>
 						<div class="row" v-if="markers.length > 0">
-							<div class="col s12">
-								<table class="white">
-									<tr><td><b>Total GPS Points:</b></td><td>{{markers.length.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}}</td></tr>
-									<tr><td><b>Lat/Lng:</b></td><td>{{markers[index].latitude}},{{markers[index].longitude}}</td></tr>
-								</table>
+							<div class="col s12 white">
+								<div class="row output-row">
+									<div class="col s5 bold">Total GPS Points:</div>
+									<div class="col s7">{{markers.length.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}}</div>
+								</div>
+								<div class="row output-row">
+									<div class="col s5 bold">Radio (Faster):</div>
+									<div class="col s7">{{vehicle(vehicleid).RadioId}}</div>
+								</div>
+								<div class="row output-row">
+									<div class="col s5 bold">Comments (Faster):</div>
+									<div class="col s7">{{vehicle(vehicleid).FasterComment}}</div>
+								</div>
+								<div class="row output-row">
+									<div class="col s5 bold">Lat/Lng:</div>
+									<div class="col s7">{{markers[index].latitude}},{{markers[index].longitude}}</div>
+								</div>
+								<div class="row output-row">
+									<div class="col s5 bold">Time:</div>
+									<div class="col s7">{{formmatedTimestamp(markers[index].CreateTS)}}</div>
+								</div>
 							</div>
 						</div>
 					
@@ -174,9 +193,9 @@
 									:options="{ pixelOffset: { width:0, height: -35}}" 
 									:position="{lat: markers[index].latitude, lng: markers[index].longitude}" 
 									:opened="true">
-									{{ markers[index].CreateTS.replace("T","  ").replace("Z","").split(".")[0] }}
+									{{ formmatedTimestamp(markers[index].CreateTS) }}
 									<br>
-									Speed: {{markers[index].Velocity}}
+									Speed: {{markers[index].Velocity}}									
 								</gmap-info-window>
 								
 								<!--Path-->
@@ -231,6 +250,7 @@
 					vehicles: [],
 					index: 1,
 					loading: false,	
+					noResults: false,
 					showAll: true,
 					map: {
 						center: {lat: 33.045173953531084, lng: -96.97010792578122},
@@ -300,11 +320,17 @@
 							datetime1: _this.datetime1,
 							datetime2: _this.datetime2
 						}).then(function(_results){
-							if (_results.data[0][0].hasOwnProperty("Error")){
-								_this.errorMessage = _results.data[0][0].Error
-							}else{
-								_this.markers = _results.data[0]
+							if (_results.data[0].length == 0){
+								_this.noResults = true
 								_this.loading = false
+							}else{
+								if (_results.data[0][0].hasOwnProperty("Error")){
+									_this.errorMessage = _results.data[0][0].Error
+								}else{
+									_this.markers = _results.data[0]
+									_this.loading = false
+									_this.noResults = false
+								}
 							}
 						})					
 					},					
@@ -316,10 +342,15 @@
 							_this.$refs.mymap.$mapObject.data.loadGeoJson(_citylimits)
 						},100)
 					},
+					vehicle: function(_vehicleid){
+						return this.vehicles.filter(function(_v){
+							return _v.VehicleId == _vehicleid
+						})[0]
+					},
 					vehicleName: function(_vehicleid){
 						return this.vehicles.filter(function(_v){
 							return _v.VehicleId == _vehicleid
-						})[0].VIN
+						})[0].VehicleName
 					},
 					materializeVehicleSelect: function(){
 						var _this = this
@@ -330,10 +361,13 @@
 							$("#selectVehicles").append($newOptGroup)
 						})
 						_this.vehicles.forEach(function(c){                                                   
-							var $newOpt = $("<option>").attr("value",c.VehicleId).text(c.VIN + (c.Make.length > 0 ? " - " + c.Make : "") + "\nLatest GPS: " + c.LastGPS )
+							var $newOpt = $("<option>").attr("value",c.VehicleId).text(c.VehicleName + (c.Make.length > 0 ? " - " + c.Make : "") + "\nLatest GPS: " + c.LastGPS )
 							$("#og_" + c.DepartmentId).append($newOpt);                                    
 						})                                
 						$("#selectVehicles").trigger("contentChanged")
+					},
+					formmatedTimestamp: function(_timestamp){
+						return _timestamp.replace("T","  ").replace("Z","").split(".")[0]
 					}
 				},
 				computed: {
